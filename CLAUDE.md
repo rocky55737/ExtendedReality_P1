@@ -18,9 +18,9 @@
 
 ## Unreal MCP (Claude Code ↔ 에디터)
 
-- `Project1/.mcp.json`에 `unreal` MCP 서버(`http://127.0.0.1:8000/mcp`)가 설정되어 있다.
+- 저장소 루트의 `.mcp.json`과 `Project1/.mcp.json`에 `unreal` MCP 서버(`http://127.0.0.1:8000/mcp`)가 똑같이 설정되어 있다. 설정을 바꿀 때는 두 파일을 함께 수정한다.
 - 에디터 설정(`Config/DefaultEditorPerProjectUserSettings.ini`)으로 MCP 서버가 에디터 실행 시 포트 8000에서 자동 시작된다.
-- MCP 도구는 **Unreal 에디터가 열려 있을 때만** 동작한다. Claude Code는 `Project1/` 폴더에서 실행한다.
+- MCP 도구는 **Unreal 에디터가 열려 있을 때만** 동작한다. Claude Code는 저장소 루트나 `Project1/` 폴더 중 어디에서 실행해도 된다.
 
 ## 작업 규칙
 
