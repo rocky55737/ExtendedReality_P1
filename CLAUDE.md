@@ -36,17 +36,32 @@
 - [x] Unreal MCP 서버 활성화, Claude Code 연결
 - [ ] 프로젝트 목표 및 요구사항 정리 (아직 정하지 않음. 기존 계획은 GitHub 이슈 #1~#7에 있고, 시나리오 후보는 이슈 #1 코멘트에 있음. 사용자가 확정하기 전에는 계획을 바꾸지 않는다)
 - [x] 마커리스 모캡 플러그인 설치 및 프로젝트에서 활성화
-- [ ] **진행 중: 영상 → 마커리스 모캡 → Manny 리타게팅 파이프라인 테스트** (아래 참고)
+- [x] 영상 → 마커리스 모캡 → Manny 리타게팅 파이프라인 테스트 (2026-10-19 데스크톱에서 완료. Manny가 춤 동작을 잘 따라함)
+- [ ] 시나리오, 정식 영상(합법적인 것), 3D 모델 정하기 → 남은 이슈(#3 메타휴먼, #4 리타게팅·Sequencer, #5 IK, #6 피직스, #7 렌더링)
 
-## 현재 작업: 마커리스 모캡 파이프라인 테스트
+## 마커리스 모캡 파이프라인 (테스트 완료)
 
-목표: 시나리오와 정식 영상은 나중에 정하고, 먼저 "영상 → 애니메이션 → 기본 마네킹(Manny)"이 제대로 움직이는지 확인한다.
+시나리오와 정식 영상은 아직 정하지 않았다. 먼저 "영상 → 애니메이션 → 기본 마네킹(Manny)"이 제대로 움직이는지 확인했다. 정식 영상도 같은 절차로 진행한다.
 
-- 테스트 영상: `C:\Users\user\Videos\4K Video Downloader+\cortis_dance.mp4` (유튜브 쇼츠 K-pop 댄스, 데스크톱에만 있음). **테스트 전용이므로 커밋하지 않는다.** 정식 영상은 사용자가 합법적인 것으로 따로 찾는다.
-- 노트북에서 이어갈 때: 위 플러그인을 설치하고, 영상 파일을 아무 폴더에 둔 뒤 1단계부터 다시 한다.
+테스트 결과물 (모두 `Content/CaptureManager/` 안에 있어서 git에서 제외됨, 데스크톱에만 있음)
+- `Imports/Mono_Video_Ingest/cortis_dance_1/`
+  - `CD_cortis_dance_1`: 캡처 데이터 (60fps, 1470프레임)
+  - `MHP_cortis_dance`: MetaHuman Performance
+  - `SK_cortis_dance`, `AS_cortis_dance`: Performer Skeleton 메시와 애니메이션
+  - `AS_cortis_dance1`: Manny(`SK_Mannequin`) 스켈레톤으로 리타게팅한 애니메이션
+- `Lv1_MocapTest`: 테스트 레벨. 원점에 `Manny_MocapTest`가 있고, `AS_cortis_dance1`을 반복 재생한다 (Simulate로 확인)
+
+알게 된 점
+- Export를 Existing Skeleton + `SKM_Manny_Simple`로 하면 "필요한 바디 본이 누락되었습니다" 경고가 뜬다. MetaHuman과 Manny의 척추·목 본 구성이 다르기 때문이다. 이 경우 **Performer Skeleton**으로 내보낸다.
+- 리타게팅: 애니메이션 우클릭 → Retarget Animations → 대상 `SKM_Manny_Simple`로 지정하면 IK Rig와 리타게터가 자동으로 만들어진다. Unreal MCP에는 에셋 생성(Performance, IK Rig, 리타게터, 레벨) 기능이 없어서 이런 에셋은 사용자가 UI에서 만든다. 만든 뒤 속성 설정, 액터 배치, 저장은 MCP로 할 수 있다.
+- MetaHuman Performance 처리는 24초 영상에 약 15분 걸렸다.
+- MCP의 `CaptureEditorImage`는 에디터가 백그라운드에 있으면 화면이 갱신되지 않은 이미지를 돌려준다. 이럴 때는 사용자에게 직접 확인해 달라고 한다.
+
+- 테스트 영상 원본: `C:\Users\user\Videos\4K Video Downloader+\cortis_dance.mp4` (유튜브 쇼츠 K-pop 댄스, 데스크톱에만 있음). **테스트 전용이므로 커밋하지 않는다.** 정식 영상은 사용자가 합법적인 것으로 따로 찾는다.
+- 다른 PC에서 할 때: 위 플러그인을 설치하고, 영상 파일을 아무 폴더에 둔 뒤 1단계부터 다시 한다.
 
 절차 (공식 문서: https://dev.epicgames.com/documentation/metahuman/metahuman-animation-from-mono-video-capture-in-unreal-engine)
-1. [ ] **영상 가져오기 (사용자가 직접)**: Tools → Live Link Hub → 드롭다운에서 Capture Manager → Data Devices에서 Add → Mono Video Ingest → Details에서 소스 경로를 영상 폴더로 지정 → 파일 선택 후 Add to Queue → Start. 결과는 `Content/CaptureManager/Imports/<장치 이름>/`에 캡처 데이터 에셋으로 생긴다. Live Link Hub는 별도 앱이라 MCP로 조작할 수 없다.
-2. [ ] **솔브**: 콘텐츠 브라우저에서 MetaHuman → MetaHuman Performance 에셋 생성 → Footage Capture Data에 1단계 에셋 지정 → Processing Parameters에서 Facial Tracking 끄기, Body Tracking 켜기, Head Movement Mode는 Disable → 타임라인 트림 → Process
-3. [ ] **내보내기**: Export Animation. 먼저 Existing Skeleton으로 대상에 `SKM_Manny`를 지정해 본다. 안 되면 Performer Skeleton으로 내보낸 뒤 IK Retargeter로 Manny에 리타게팅한다.
-4. [ ] 레벨에 Manny를 배치하고 애니메이션을 재생해서 확인한다.
+1. [x] **영상 가져오기 (사용자가 직접)**: Tools → Live Link Hub → 드롭다운에서 Capture Manager → Data Devices에서 Add → Mono Video Ingest → Details에서 소스 경로를 영상 폴더로 지정 → 파일 선택 후 Add to Queue → Start. 결과는 `Content/CaptureManager/Imports/<장치 이름>/`에 캡처 데이터 에셋으로 생긴다. Live Link Hub는 별도 앱이라 MCP로 조작할 수 없다.
+2. [x] **솔브**: 콘텐츠 브라우저에서 MetaHuman → MetaHuman Performance 에셋 생성 → Footage Capture Data에 1단계 에셋 지정 → Processing Parameters에서 Facial Tracking 끄기, Body Tracking 켜기, Head Movement Mode는 Disable → 타임라인 트림 → Process
+3. [x] **내보내기**: Export Animation에서 Performer Skeleton을 고른다. 그다음 Retarget Animations로 `SKM_Manny_Simple`에 리타게팅한다.
+4. [x] 레벨에 Manny를 배치하고 애니메이션을 재생해서 확인한다.
