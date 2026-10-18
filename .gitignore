@@ -10,6 +10,9 @@ Render/
 # MetaHuman 에셋 (용량이 커서 제외)
 **/Content/MetaHumans/
 
+# Capture Manager로 가져온 촬영 영상 (용량이 크고 저작권 영상이 섞일 수 있어 제외)
+**/Content/CaptureManager/
+
 # Built data for maps
 *_BuiltData.uasset
 
