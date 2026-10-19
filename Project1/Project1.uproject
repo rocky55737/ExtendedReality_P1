@@ -66,7 +66,12 @@
 		},
 		{
 			"Name": "MetaHumanBodyTracker",
-			"Enabled": true
+			"Enabled": true,
+			"SupportedTargetPlatforms": [
+				"Win64",
+				"Mac",
+				"Linux"
+			]
 		}
 	]
 }
