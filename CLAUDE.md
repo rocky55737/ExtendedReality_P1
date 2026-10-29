@@ -61,8 +61,18 @@
   - 피직스(#6): 공기포(Niagara) → 벽 파괴(Chaos Destruction)
   - 소리: 원곡 음원은 쓰지 않는다(무료 효과음).
 - [ ] 콘티 확정 (컷 4~6개)
-- [ ] 펀치 동작 직접 촬영 → 모캡 (#2)
-- [ ] 남은 이슈: #3 메타휴먼, #4 리타게팅·Sequencer, #5 인버스 리깅, #6 피직스, #7 렌더링
+- [x] 펀치 동작 직접 촬영 → 모캡 (#2, 2026-10-29 노트북): `CD_punch_1` → `MHP_punch` → `AS_MHP_punch`(Performer Skeleton)
+- [x] 메타휴먼 캐릭터 (#3, 2026-10-30 노트북): 프리셋 기반 `MH_Puncher` → Assemble(UE Cinematic) → `/Game/MetaHumans/Puncher/BP_Puncher`
+- [x] 메타휴먼 리타게팅 (#4 일부, 2026-10-30): `AS_MHP_punch` → `AS_MHP_punch_Puncher`(대상 `SKM_MH_Puncher_BodyMesh`). Simulate로 확인했고 결과가 좋다. `AS_MHP_punch1`은 Manny용 테스트라 쓰지 않는다.
+- [ ] 남은 이슈: #4 Sequencer, #5 인버스 리깅, #6 피직스, #7 렌더링
+
+## 메타휴먼 작업 메모
+
+- 메타휴먼 에셋(`Content/MetaHumans/`)은 git 제외라 노트북에만 있다. 다른 PC에서는 `MH_Puncher`부터 다시 만들어야 한다.
+- 리깅/Assemble 중 "용량 부족" 경고는 디스크가 아니라 RAM 부족이다. 에디터를 재시작하고 `MH_Puncher`만 연 상태에서 진행한다.
+- Assemble 결과물은 메모리에만 생기고 저장되지 않는다. 끝나면 반드시 Save All(또는 MCP `save_assets`)을 한다.
+- 레벨에 배치한 `BP_Puncher`에서 애니메이션을 재생하려면 `Body` 컴포넌트의 AnimationMode를 `AnimationSingleNode`로 바꾸고 AnimationData를 지정한다. MCP `set_properties`를 쓸 때는 `{"AnimationData": {"animToPlay": {"refPath": "..."}}}` 형식이어야 한다. 문자열로 넣으면 실패해도 true를 반환한다.
+- MCP `CaptureViewport`는 Simulate 중에도 동작한다. 응답이 커서 파일로 저장되는데, base64를 디코딩하면 이미지로 볼 수 있다.
 
 ## 마커리스 모캡 파이프라인 (테스트 완료)
 
