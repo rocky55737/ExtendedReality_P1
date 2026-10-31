@@ -74,7 +74,9 @@
 - [x] 벽 Fracture (#6 일부, 2026-10-31 노트북): `Wall_Target`을 Geometry Collection `/Game/Story/GC_Wall`로 바꾸고 Uniform Voronoi(40~60)로 48조각 분할. 레벨 액터 이름은 `Wall_Target`, 위치 (0, 500, 360), 스케일 1(크기는 지오메트리에 반영됨).
 - [x] 벽 붕괴 트리거 (#6 일부, 2026-10-31 노트북): `/Game/Story/BP_WallBreaker`(FieldSystemActor 상속). BeginPlay 뒤 `TriggerTime`초가 지나면 자기 위치에서 External Cluster Strain(RadialFalloff, 1e6, 반경 `BlastRadius`)으로 조각을 분리하고, Linear Velocity(RadialVector, `BlastSpeed`)로 날린다. 레벨 배치 (0, 380, 360), TriggerTime 3.0 / BlastSpeed 900 / BlastRadius 400. `LS_Punch_Player`(LevelSequenceActor, Auto Play)가 Simulate/PIE에서 시퀀스를 자동 재생한다. Simulate에서 벽이 서 있다가 3초에 +Y로 무너지는 것을 확인했다. 위쪽 조각이 높이 뜨는 것은 공기포 이펙트와 함께 다시 조정한다.
 - [x] 공기포 (#6, 2026-10-31 노트북): Unreal MCP에 Niagara 도구가 없어서 메시+머티리얼+Sequencer로 만들었다. `/Game/Story/M_AirCannon`(Translucent·Unlit, Fresnel 가장자리만 하늘색으로 빛남)을 기본 구체 `AirCannon`(콜리전·그림자 끔, `Story` 폴더)에 입혔다. `LS_Punch`의 Transform 트랙(완료 모드 KeepState): 117프레임까지 스케일 0 → 118 주먹 앞 생성 → 120 주먹 최대로 뻗음 → 124 벽 표면 도달 → 125 벽 면에 크게 퍼짐 → 127 → 129 스케일 0. 레벨에 놓인 `AirCannon`도 스케일 0, Mobility Movable. `WallBreaker` TriggerTime 4.17초(125프레임). Simulate에서 공기포가 처음과 끝에 보이지 않고, 벽에 닿는 것을 확인했다.
-- [ ] 남은 이슈: #4 카메라·컷, #5 인버스 리깅(공중 정지·기 모으기, 마무리 자세), #7 렌더링
+- [x] 공중 정지 (#5 일부, 2026-10-31 노트북): 모캡 `AS_MHP_punch_Puncher`에는 점프가 들어 있다(55 준비, 58 이륙, 65 최고점에서 가장 웅크림, 71 착지, 119 주먹 최대, 120 회수 시작). `LS_Punch` Body 애니메이션 트랙을 세 구간으로 나눴다: 0~65 그대로 / 65~125 모캡 65프레임에서 정지(아주 짧은 구간을 반복 재생) / 125~212 모캡 65부터. 그래서 착지 131, 주먹 최대 179, 공기포 177~188, `WallBreaker` TriggerTime 6.133초(184프레임). 시퀀스 길이 0~212.
+- 콘티 변경 (2026-10-31): 사우스포 자세 → 점프 후 공중 정지·기 모으기(카메라 클로즈업 후 복귀) → 떨어지며 앞손 스트레이트 → 공기포·벽 붕괴 → 마무리는 리깅이 아니라 카메라 무빙(뒤에서 벽이 부서진 방향을 봄).
+- [ ] 남은 이슈: #5 기 모으기 떨림, #4 카메라·컷, #7 렌더링
 
 ## 메타휴먼 작업 메모
 
@@ -88,6 +90,10 @@
 - 에디터가 한국어라서 Blueprint `write_graph_dsl`이 동작하지 않는다(`AddEvent|...` 노드를 못 찾음). 노드 타입 ID도 `유틸리티|플로컨트롤|Delay`, `필드|AddTransientField`처럼 한국어다. `create_node`·`connect_pins`·`set_pin_value`로 만들고, ProgrammaticToolset 스크립트로 묶어서 실행한다. BeginPlay 노드는 `add_event`에 `ReceiveBeginPlay`를 넘겨 만든다.
 - Fracture 모드에서 만든 Geometry Collection은 조각 구분 색(`bShowBoneColors`)이 켜진 채 남는다. 끄지 않으면 Simulate에서 알록달록하게 보인다.
 - Simulate 테스트: ProgrammaticToolset 스크립트에서 `StartPIE`(bSimulate) → `time.sleep` → `CaptureViewport`를 여러 번 → `StopPIE`. 결과 base64를 디코딩해서 본다.
+- `LS_Punch`의 Tick Resolution은 24000이다(30fps 한 프레임 = 800틱). 애니메이션 섹션의 `startFrameOffset`/`endFrameOffset`은 이 틱 단위다.
+- MCP `bake_to_control_rig`와 `load_anim_into_rig`는 시퀀서의 구간 나누기·오프셋을 무시하고 원본 애니메이션을 0프레임부터 그대로 넣는다(`start_frame`도 무시됨). 베이크하면 원본 애니메이션 트랙이 아웃라이너에서 '비활성' 상태가 되고, 섹션의 `bIsActive`를 켜도 풀리지 않는다.
+- 메타휴먼 Body에 Control Rig 트랙을 붙였다 떼기를 반복하면 애니메이션 트랙이 더 이상 적용되지 않는다(차렷 또는 A자세로 멈춤). 시퀀스에서 캐릭터 바인딩을 지우고 `add_actors`로 다시 넣은 뒤 트랙을 새로 만들면 해결된다. 다시 넣을 때 자동으로 생기는 트랙(Face Control Rig 등)은 지운다.
+- Control Rig가 캐릭터를 움직일 때는 MCP 캡처에 반영되지 않는다. 애니메이션 트랙만 있을 때는 반영된다.
 - 시퀀스로 움직일 액터는 Mobility를 Movable로 바꾼다. Static이면 에디터에서 프레임을 넘길 때는 움직이지만 Simulate/렌더에서는 움직이지 않는다.
 - MCP `add_actors`로 액터를 시퀀스에 넣으면 Transform 트랙(현재 위치·크기가 키로 들어 있음)이 자동으로 생긴다. 직접 Transform 트랙을 따로 만들면 두 트랙이 섞여 값이 평균이 된다. 자동 트랙을 지우거나 그 트랙에 키를 넣는다.
 - Simulate 중 값 확인: PIE 액터 경로는 `/Game/ThirdPerson/UEDPIE_0_Lvl_ThirdPerson.Lvl_ThirdPerson:PersistentLevel.<액터 이름>`이다. 캡처보다 `get_actor_transform`으로 숫자를 읽는 쪽이 빠르고 정확하다.
