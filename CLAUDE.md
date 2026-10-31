@@ -73,7 +73,8 @@
 - [x] 시퀀스·벽 배치 (#4 일부, 2026-10-31 노트북): `/Game/Cinematics/LS_Punch`(30fps, 0~152프레임)에 `BP_Puncher` Body → `AS_MHP_punch_Puncher` 트랙. `Lvl_ThirdPerson`에서 `BP_Puncher`는 (0, 0, 211.67) yaw -90, 벽 `Wall_Target`(기본 큐브 4m×0.3m×3m)은 (0, 500, 360), 아웃라이너 `Story` 폴더. 펀치가 벽 정면을 향하는 것을 확인했다.
 - [x] 벽 Fracture (#6 일부, 2026-10-31 노트북): `Wall_Target`을 Geometry Collection `/Game/Story/GC_Wall`로 바꾸고 Uniform Voronoi(40~60)로 48조각 분할. 레벨 액터 이름은 `Wall_Target`, 위치 (0, 500, 360), 스케일 1(크기는 지오메트리에 반영됨).
 - [x] 벽 붕괴 트리거 (#6 일부, 2026-10-31 노트북): `/Game/Story/BP_WallBreaker`(FieldSystemActor 상속). BeginPlay 뒤 `TriggerTime`초가 지나면 자기 위치에서 External Cluster Strain(RadialFalloff, 1e6, 반경 `BlastRadius`)으로 조각을 분리하고, Linear Velocity(RadialVector, `BlastSpeed`)로 날린다. 레벨 배치 (0, 380, 360), TriggerTime 3.0 / BlastSpeed 900 / BlastRadius 400. `LS_Punch_Player`(LevelSequenceActor, Auto Play)가 Simulate/PIE에서 시퀀스를 자동 재생한다. Simulate에서 벽이 서 있다가 3초에 +Y로 무너지는 것을 확인했다. 위쪽 조각이 높이 뜨는 것은 공기포 이펙트와 함께 다시 조정한다.
-- [ ] 남은 이슈: #4 카메라·컷, #5 인버스 리깅, #6 공기포 Niagara·타이밍 맞추기, #7 렌더링
+- [x] 공기포 (#6, 2026-10-31 노트북): Unreal MCP에 Niagara 도구가 없어서 메시+머티리얼+Sequencer로 만들었다. `/Game/Story/M_AirCannon`(Translucent·Unlit, Fresnel 가장자리만 하늘색으로 빛남)을 기본 구체 `AirCannon`(콜리전·그림자 끔, `Story` 폴더)에 입혔다. `LS_Punch`의 Transform 트랙: 117프레임까지 스케일 0 → 118 주먹 앞 생성 → 120 주먹 최대로 뻗음 → 126 벽 도달 → 128 벽에서 납작하게 퍼짐 → 131 사라짐. `WallBreaker` TriggerTime을 4.2초(126프레임)로 맞췄다. Simulate에서 공기포가 닿은 직후 벽이 무너지는 것을 확인했다.
+- [ ] 남은 이슈: #4 카메라·컷, #5 인버스 리깅(공중 정지·기 모으기, 마무리 자세), #7 렌더링
 
 ## 메타휴먼 작업 메모
 
@@ -87,6 +88,8 @@
 - 에디터가 한국어라서 Blueprint `write_graph_dsl`이 동작하지 않는다(`AddEvent|...` 노드를 못 찾음). 노드 타입 ID도 `유틸리티|플로컨트롤|Delay`, `필드|AddTransientField`처럼 한국어다. `create_node`·`connect_pins`·`set_pin_value`로 만들고, ProgrammaticToolset 스크립트로 묶어서 실행한다. BeginPlay 노드는 `add_event`에 `ReceiveBeginPlay`를 넘겨 만든다.
 - Fracture 모드에서 만든 Geometry Collection은 조각 구분 색(`bShowBoneColors`)이 켜진 채 남는다. 끄지 않으면 Simulate에서 알록달록하게 보인다.
 - Simulate 테스트: ProgrammaticToolset 스크립트에서 `StartPIE`(bSimulate) → `time.sleep` → `CaptureViewport`를 여러 번 → `StopPIE`. 결과 base64를 디코딩해서 본다.
+- `AS_MHP_punch_Puncher`(30fps 기준 0~152프레임)에서 주먹이 가장 뻗는 순간은 120프레임(4.0초)이다. 124프레임에는 이미 거둬들인다.
+- 캡처 여러 장을 한 스크립트에서 받으면 응답이 커서 MCP 연결이 끊긴다(5장 이상). 4장씩 받고, PIL로 잘라 한 장으로 합쳐서 본다. MCP 도구를 쓰기 전에 `IsPIERunning`으로 Simulate가 켜져 있는지 확인한다(켜져 있으면 PIE 월드가 캡처된다).
 - Unreal MCP에는 Fracture(Geometry Collection 생성·분할) 도구가 없다. 파이썬 스크립트 도구도 `unreal` 모듈을 쓸 수 없다. Fracture는 사용자가 Fracture 모드에서 직접 한다.
 - MCP `CaptureViewport`는 Simulate 중에도 동작한다. 응답이 커서 파일로 저장되는데, base64를 디코딩하면 이미지로 볼 수 있다.
 
