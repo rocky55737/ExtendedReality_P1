@@ -72,7 +72,8 @@
 - [x] 메타휴먼 리타게팅 (#4 일부, 2026-10-30): `AS_MHP_punch` → `AS_MHP_punch_Puncher`(대상 `SKM_MH_Puncher_BodyMesh`). Simulate로 확인했고 결과가 좋다. `AS_MHP_punch1`은 Manny용 테스트라 쓰지 않는다.
 - [x] 시퀀스·벽 배치 (#4 일부, 2026-10-31 노트북): `/Game/Cinematics/LS_Punch`(30fps, 0~152프레임)에 `BP_Puncher` Body → `AS_MHP_punch_Puncher` 트랙. `Lvl_ThirdPerson`에서 `BP_Puncher`는 (0, 0, 211.67) yaw -90, 벽 `Wall_Target`(기본 큐브 4m×0.3m×3m)은 (0, 500, 360), 아웃라이너 `Story` 폴더. 펀치가 벽 정면을 향하는 것을 확인했다.
 - [x] 벽 Fracture (#6 일부, 2026-10-31 노트북): `Wall_Target`을 Geometry Collection `/Game/Story/GC_Wall`로 바꾸고 Uniform Voronoi(40~60)로 48조각 분할. 레벨 액터 이름은 `Wall_Target`, 위치 (0, 500, 360), 스케일 1(크기는 지오메트리에 반영됨).
-- [ ] 남은 이슈: #4 카메라·컷, #5 인버스 리깅, #6 피직스(벽 고정 → 공기포 충돌 시 붕괴), #7 렌더링
+- [x] 벽 붕괴 트리거 (#6 일부, 2026-10-31 노트북): `/Game/Story/BP_WallBreaker`(FieldSystemActor 상속). BeginPlay 뒤 `TriggerTime`초가 지나면 자기 위치에서 External Cluster Strain(RadialFalloff, 1e6, 반경 `BlastRadius`)으로 조각을 분리하고, Linear Velocity(RadialVector, `BlastSpeed`)로 날린다. 레벨 배치 (0, 380, 360), TriggerTime 3.0 / BlastSpeed 900 / BlastRadius 400. `LS_Punch_Player`(LevelSequenceActor, Auto Play)가 Simulate/PIE에서 시퀀스를 자동 재생한다. Simulate에서 벽이 서 있다가 3초에 +Y로 무너지는 것을 확인했다. 위쪽 조각이 높이 뜨는 것은 공기포 이펙트와 함께 다시 조정한다.
+- [ ] 남은 이슈: #4 카메라·컷, #5 인버스 리깅, #6 공기포 Niagara·타이밍 맞추기, #7 렌더링
 
 ## 메타휴먼 작업 메모
 
@@ -83,6 +84,9 @@
 - 메타휴먼을 Sequencer에 추가하면 에디터가 Body에 키가 없는 Control Rig 트랙을 자동으로 붙인다. 이 트랙이 애니메이션 트랙을 덮어 캐릭터가 멈춰 있게 된다. 애니메이션만 재생할 때는 이 트랙을 지운다.
 - MCP `set_actor_transform`에 rotation만 넘기면 location이 (0,0,0)으로 바뀐다. location, rotation, scale을 모두 넘긴다.
 - 레벨 액터는 MCP `save_actor`나 경로를 지정한 `save_assets`로 저장되지 않는다("Asset does not exist"). `save_assets`에 빈 목록(`{"asset_paths": []}`)을 넘기면 변경된 액터까지 모두 저장된다.
+- 에디터가 한국어라서 Blueprint `write_graph_dsl`이 동작하지 않는다(`AddEvent|...` 노드를 못 찾음). 노드 타입 ID도 `유틸리티|플로컨트롤|Delay`, `필드|AddTransientField`처럼 한국어다. `create_node`·`connect_pins`·`set_pin_value`로 만들고, ProgrammaticToolset 스크립트로 묶어서 실행한다. BeginPlay 노드는 `add_event`에 `ReceiveBeginPlay`를 넘겨 만든다.
+- Fracture 모드에서 만든 Geometry Collection은 조각 구분 색(`bShowBoneColors`)이 켜진 채 남는다. 끄지 않으면 Simulate에서 알록달록하게 보인다.
+- Simulate 테스트: ProgrammaticToolset 스크립트에서 `StartPIE`(bSimulate) → `time.sleep` → `CaptureViewport`를 여러 번 → `StopPIE`. 결과 base64를 디코딩해서 본다.
 - Unreal MCP에는 Fracture(Geometry Collection 생성·분할) 도구가 없다. 파이썬 스크립트 도구도 `unreal` 모듈을 쓸 수 없다. Fracture는 사용자가 Fracture 모드에서 직접 한다.
 - MCP `CaptureViewport`는 Simulate 중에도 동작한다. 응답이 커서 파일로 저장되는데, base64를 디코딩하면 이미지로 볼 수 있다.
 
