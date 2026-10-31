@@ -76,7 +76,9 @@
 - [x] 공기포 (#6, 2026-10-31 노트북): Unreal MCP에 Niagara 도구가 없어서 메시+머티리얼+Sequencer로 만들었다. `/Game/Story/M_AirCannon`(Translucent·Unlit, Fresnel 가장자리만 하늘색으로 빛남)을 기본 구체 `AirCannon`(콜리전·그림자 끔, `Story` 폴더)에 입혔다. `LS_Punch`의 Transform 트랙(완료 모드 KeepState): 117프레임까지 스케일 0 → 118 주먹 앞 생성 → 120 주먹 최대로 뻗음 → 124 벽 표면 도달 → 125 벽 면에 크게 퍼짐 → 127 → 129 스케일 0. 레벨에 놓인 `AirCannon`도 스케일 0, Mobility Movable. `WallBreaker` TriggerTime 4.17초(125프레임). Simulate에서 공기포가 처음과 끝에 보이지 않고, 벽에 닿는 것을 확인했다.
 - [x] 공중 정지 (#5 일부, 2026-10-31 노트북): 모캡 `AS_MHP_punch_Puncher`에는 점프가 들어 있다(55 준비, 58 이륙, 65 최고점에서 가장 웅크림, 71 착지, 119 주먹 최대, 120 회수 시작). `LS_Punch` Body 애니메이션 트랙을 세 구간으로 나눴다: 0~65 그대로 / 65~125 모캡 65프레임에서 정지(아주 짧은 구간을 반복 재생) / 125~212 모캡 65부터. 그래서 착지 131, 주먹 최대 179, 공기포 177~188, `WallBreaker` TriggerTime 6.133초(184프레임). 시퀀스 길이 0~212.
 - 콘티 변경 (2026-10-31): 사우스포 자세 → 점프 후 공중 정지·기 모으기(카메라 클로즈업 후 복귀) → 떨어지며 앞손 스트레이트 → 공기포·벽 붕괴 → 마무리는 리깅이 아니라 카메라 무빙(뒤에서 벽이 부서진 방향을 봄).
-- [ ] 남은 이슈: #5 기 모으기 떨림, #4 카메라·컷, #7 렌더링
+- [x] 기 모으기 떨림 (#5, 2026-10-31): Body에 레이어드 `MetaHuman_ControlRig` 트랙. 72~122에서 몸통·가슴·양 주먹·머리가 점점 세게 떨리고, 65~122에 4cm 떠오른다. 레이어드 리그는 깨끗한 바인딩에서는 애니메이션 트랙 위에 정상으로 얹힌다.
+- [x] 카메라 (#4, 2026-10-31): `Story/Cameras` 폴더의 CineCamera 6대(Cam5는 컷에서 빠져 안 쓰임). 컷: Cam1 대치 0~52(정면 대각선 20mm) / Cam2 도약 52~65 / Cam3 공중 기 모으기 65~125(앞쪽 반원 궤도, 35mm) / Cam4 125~215(캐릭터-벽 중앙에서 수직, 20mm, 벽 왼쪽·캐릭터 오른쪽, 스트레이트~충돌) / Cam6 마무리 215~300(뒤쪽 대각선 24mm). 180~215 슬로모션 0.35배. 캐릭터는 212~300 마지막 자세 유지. 캐릭터는 사우스포라 가슴이 +X를 향한다(정면 샷은 +X 쪽에서).
+- [ ] 남은 이슈: #7 렌더링(Movie Render Queue), 소리
 
 ## 메타휴먼 작업 메모
 
@@ -94,6 +96,9 @@
 - MCP `bake_to_control_rig`와 `load_anim_into_rig`는 시퀀서의 구간 나누기·오프셋을 무시하고 원본 애니메이션을 0프레임부터 그대로 넣는다(`start_frame`도 무시됨). 베이크하면 원본 애니메이션 트랙이 아웃라이너에서 '비활성' 상태가 되고, 섹션의 `bIsActive`를 켜도 풀리지 않는다.
 - 메타휴먼 Body에 Control Rig 트랙을 붙였다 떼기를 반복하면 애니메이션 트랙이 더 이상 적용되지 않는다(차렷 또는 A자세로 멈춤). 시퀀스에서 캐릭터 바인딩을 지우고 `add_actors`로 다시 넣은 뒤 트랙을 새로 만들면 해결된다. 다시 넣을 때 자동으로 생기는 트랙(Face Control Rig 등)은 지운다.
 - Control Rig가 캐릭터를 움직일 때는 MCP 캡처에 반영되지 않는다. 애니메이션 트랙만 있을 때는 반영된다.
+- CineCamera를 `add_actors`로 시퀀스에 넣으면 CameraComponent 아래에 CurrentFocalLength(35)·ManualFocusDistance·CurrentAperture 트랙이 자동으로 생긴다. 렌즈를 바꾸려면 컴포넌트 속성이 아니라 이 트랙의 키(채널 이름 `None`)를 바꾼다.
+- MCP `set_camera_cut_binding`은 내부 오류가 난다. 컷 섹션에 `set_properties`로 `{"CameraBindingID": {"guid": "<카메라 바인딩 ID>", "sequenceId": 0, "resolveParentIndex": 0}}`을 넣는다.
+- CaptureViewport는 화각이 90도로 고정이다. 시네 카메라 구도를 보려면 카메라 위치로 캡처한 뒤 가운데를 잘라낸다(20mm면 가로 59%).
 - 시퀀스로 움직일 액터는 Mobility를 Movable로 바꾼다. Static이면 에디터에서 프레임을 넘길 때는 움직이지만 Simulate/렌더에서는 움직이지 않는다.
 - MCP `add_actors`로 액터를 시퀀스에 넣으면 Transform 트랙(현재 위치·크기가 키로 들어 있음)이 자동으로 생긴다. 직접 Transform 트랙을 따로 만들면 두 트랙이 섞여 값이 평균이 된다. 자동 트랙을 지우거나 그 트랙에 키를 넣는다.
 - Simulate 중 값 확인: PIE 액터 경로는 `/Game/ThirdPerson/UEDPIE_0_Lvl_ThirdPerson.Lvl_ThirdPerson:PersistentLevel.<액터 이름>`이다. 캡처보다 `get_actor_transform`으로 숫자를 읽는 쪽이 빠르고 정확하다.
