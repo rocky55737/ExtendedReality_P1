@@ -83,7 +83,9 @@
 - [x] 카메라 흔들림 (#7): Cam4 Transform에 184~200프레임 감쇠 진동 키(Z ±7cm, Y ±4cm, 롤·피치 1° 이하)
 - [x] 효과음 (#7): `Tools/sfx/make_sfx.py`가 numpy로 직접 합성한다(외부 음원 없음) → `Tools/sfx/LS_Punch_sfx.wav`. Slomo 트랙을 반영해 렌더 영상 기준으로 시간을 맞춘다(전체 11.59초, 도약 1.93, 기 모으기 2.17~4.17, 착지 4.37, 발사 5.90, 충돌 6.22, 슬로모션 끝 8.75). Slomo 키를 바꾸면 스크립트의 `SLOMO_KEYS`도 바꾼다.
 - [x] Movie Render Queue 플러그인(`MovieRenderPipeline`)을 uproject에 추가 (에디터 재시작 필요)
-- [ ] 남은 이슈: #7 MRQ 렌더 → 효과음 합치기(ffmpeg 필요) → 제출
+- [x] MRQ 렌더 (#7, 2026-11-01): 1080p PNG, 웜업 프레임 0, 템포럴 샘플 8 → `Saved/MovieRenders/LS_Punch.0000~0347.png`(348장, Slomo 반영됨). MRQ에서는 `WallBreaker` 타이머가 PIE보다 약 0.25초 일찍 울려서 TriggerTime을 6.38로 늘렸다(영상 기준. PIE에서는 살짝 늦게 부서져 보이는데, 제출물이 영상이라 그대로 둔다). 새 렌더에서는 공기포가 184~186에 벽에 닿고 189~190에 벽이 부서진다. MRQ에서는 파편이 슬로모션 없이 원래 속도로 날아간다.
+- [x] 최종 영상: `bash Tools/sfx/mux.sh Project1/Saved/MovieRenders Project1/Saved/LS_Punch_final.mp4` (ffmpeg는 winget `Gyan.FFmpeg`로 설치함) → 11.6초, H.264 + AAC
+- [ ] 남은 이슈: 최종 영상 검토 → 11/3 제출
 
 ## 메타휴먼 작업 메모
 
