@@ -1,0 +1,8 @@
+color=c=0x111111:s=1920x1080:r=30:d=11.6[bg];
+[0:v]fps=30,scale=-2:1000,setsar=1,tpad=stop_mode=clone:stop_duration=6[o];
+[1:v]fps=30,scale=1264:-2,setsar=1[f];
+[bg][o]overlay=x=40:y=60:shortest=1[t1];
+[t1][f]overlay=x=616:y=200:shortest=1[t2];
+[t2]drawtext=fontfile='C\:/Windows/Fonts/malgunbd.ttf':text='직접 촬영한 원본 (모캡 입력)':fontcolor=white:fontsize=30:x=40:y=14,
+drawtext=fontfile='C\:/Windows/Fonts/malgunbd.ttf':text='최종본 — 모캡을 Control Rig로 베이크 + 리깅으로 추가한 동작':fontcolor=white:fontsize=30:x=616:y=150,
+drawtext=fontfile='C\:/Windows/Fonts/malgun.ttf':text='추가 동작\: 공중 정지·파닥이기 / 공기포 반동(88cm) / 마무리':fontcolor=0xBBBBBB:fontsize=26:x=616:y=930[v]
