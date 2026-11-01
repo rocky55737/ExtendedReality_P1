@@ -136,7 +136,7 @@
 - Geometry Collection은 부서지기 전에 `RootProxyData`의 프록시 메시(기본 큐브 + BasicShapeMaterial)로 그려진다. 벽 재질을 바꿀 때는 GC 에셋의 `Materials`와 `RootProxyData.meshOverrideMaterials`를 함께 바꾼다. 재질에 `bUsedWithGeometryCollections`가 꺼져 있으면 기본 재질로 보인다. 에디터 뷰포트는 바꾼 뒤에도 캐시된 흰 벽을 보여줄 수 있으니 Simulate에서 확인한다.
 - `CaptureViewport`에는 `annotations`를 반드시 넘긴다(주석이 필요 없으면 gridSpacing·maxLabelDistance 0).
 - MCP `bake_channel_keys`는 값 1개만 돌려준다(쓸 수 없음). 값은 `get_keys`로 읽는다.
-- `WallBreaker`는 BeginPlay 기준 타이머라서 MRQ의 Engine Warm Up 프레임만큼 일찍 부서질 수 있다. 렌더 결과에서 벽이 공기포보다 먼저 부서지면 warm-up을 0으로 하거나 TriggerTime을 그만큼 늘린다.
+- **벽 붕괴 타이밍 (2026-11-01 변경)**: 예전에는 레벨에 놓인 `BP_WallBreaker`가 BeginPlay 뒤 TriggerTime초 타이머로 터졌다. 그래서 PIE와 MRQ의 타이밍이 0.25초 어긋났다(MRQ에 맞춰 6.38로 하면 PIE에서 늦게 깨짐). 이제는 레벨 액터를 지우고, `LS_Punch`의 **Spawnable 바인딩 `WallBreaker_Spawn`**(TriggerTime 0, BlastSpeed 900, BlastRadius 400, 위치 (0,380,360))으로 바꿨다. Spawn 트랙이 0프레임에 false, **184프레임에 true**라서, 시퀀스가 184에 도달하면 생성되어 바로 터진다. PIE와 렌더 모두 같은 프레임이다. 붕괴 프레임을 바꾸려면 Spawn 섹션 `MovieSceneSpawnTrack_0.MovieSceneSpawnSection_0` 채널 `None`의 true 키를 옮긴다.
 - MCP `CaptureViewport`는 Simulate 중에도 동작한다. 응답이 커서 파일로 저장되는데, base64를 디코딩하면 이미지로 볼 수 있다.
 
 ## 마커리스 모캡 파이프라인 (테스트 완료)
