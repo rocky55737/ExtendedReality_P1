@@ -87,7 +87,7 @@
 - [x] 최종 영상: `bash Tools/sfx/mux.sh Project1/Saved/MovieRenders Project1/Saved/LS_Punch_final.mp4` (ffmpeg는 winget `Gyan.FFmpeg`로 설치함) → 11.6초, H.264 + AAC
 - [x] v1 영상 완성 (2026-11-01): 사용자가 "괜찮아 보인다"고 했다. 비교용으로 `Saved/LS_Punch_v1.mp4`에 따로 보관했다(Saved라서 git 제외).
 - [ ] 리깅 보강 (2026-11-01 계획, 이슈 #5 코멘트): 리깅으로 더한 동작이 눈에 잘 안 띄어서 보강한다. 펀치는 스트레이트라 과장하지 않는다(사용자 결정).
-  1. 기 모으기 자세 (65~125): 멈춘 모캡 위에 두 주먹을 허리 옆으로 모으는 자세를 얹는다. 떨림은 유지한다.
+  1. [x] 기 모으기 자세 (65~125, 2026-11-01): 양팔을 몸 옆으로 내리고 주먹을 허리 옆에 쥐며 가슴을 편다. 키(위팔 Z / 아래팔 Z / spine_03 Z): 65 (0,0,0) → 76 (−28,−65,10) → 100 (−31,−68,14) → 118 (−36,−74,18) → 124 (0,0,0). 떨림은 그대로 둔다. 작업 전 시퀀스를 `/Game/Cinematics/Backup/LS_Punch_v1`에 백업했다.
   2. 반동 (177~200): 공기포 반작용으로 몸이 -Y로 30~40cm 밀려나고 상체가 젖혀진다. 밀린 위치는 끝까지 유지한다.
   3. 마무리 (215~300): 주먹을 거두고 바로 서기
   4. 비교 영상: **직접 촬영한 원본 영상 | 최종본** 두 개만 나란히 붙여 본편 끝에 넣는다(사용자 결정. 촬영 원본과 비교하면 리깅으로 더한 동작이 다 보이므로 v1은 넣지 않는다).
@@ -109,7 +109,9 @@
 - `LS_Punch`의 Tick Resolution은 24000이다(30fps 한 프레임 = 800틱). 애니메이션 섹션의 `startFrameOffset`/`endFrameOffset`은 이 틱 단위다.
 - MCP `bake_to_control_rig`와 `load_anim_into_rig`는 시퀀서의 구간 나누기·오프셋을 무시하고 원본 애니메이션을 0프레임부터 그대로 넣는다(`start_frame`도 무시됨). 베이크하면 원본 애니메이션 트랙이 아웃라이너에서 '비활성' 상태가 되고, 섹션의 `bIsActive`를 켜도 풀리지 않는다.
 - 메타휴먼 Body에 Control Rig 트랙을 붙였다 떼기를 반복하면 애니메이션 트랙이 더 이상 적용되지 않는다(차렷 또는 A자세로 멈춤). 시퀀스에서 캐릭터 바인딩을 지우고 `add_actors`로 다시 넣은 뒤 트랙을 새로 만들면 해결된다. 다시 넣을 때 자동으로 생기는 트랙(Face Control Rig 등)은 지운다.
-- Control Rig가 캐릭터를 움직일 때는 MCP 캡처에 반영되지 않는다. 애니메이션 트랙만 있을 때는 반영된다.
+- Control Rig가 캐릭터를 움직일 때는 에디터 뷰포트 캡처와 `get_world_transform`(항상 0)에 반영되지 않는다. **Simulate 중 캡처에는 반영된다.** 그래서 리깅 결과는 Simulate로 확인한다(StartPIE → sleep → CaptureViewport. Simulate 뷰포트는 검은 테두리 안에 작게 그려지므로 밝은 영역만 잘라서 본다). 캡처 한 장에 약 0.6초가 걸리니 시간을 계산해서 찍는다.
+- 레이어드 MetaHuman_ControlRig 섹션 `MovieSceneControlRigParameterSection_0`(트랙 `MovieSceneControlRigParameterTrack_12`)에는 키프레임 도구 `add_key_float`로 `컨트롤.Rotation.X/Y/Z` 채널에 바로 키를 넣는다. 컨트롤 리그 경로는 `/Game/MetaHumans/Common/Common/MetaHuman_ControlRig`. 섹션은 범위가 무한이라 `get_section_range`가 실패한다.
+- 팔 FK 축(레이어드 기준, 양쪽 같은 부호로 대칭으로 움직임): `upperarm_*_fk_ctrl` Z−는 팔꿈치를 옆으로 벌림, Y+는 팔을 옆으로 들어 올림, X는 팔 비틀기. `lowerarm_*_fk_ctrl` Z−는 팔꿈치를 폄(주먹이 아래로), Z+는 더 굽힘. `spine_03_ctrl` Z+는 가슴을 펴고 상체를 젖힘, X·Y는 옆으로 기울임.
 - CineCamera를 `add_actors`로 시퀀스에 넣으면 CameraComponent 아래에 CurrentFocalLength(35)·ManualFocusDistance·CurrentAperture 트랙이 자동으로 생긴다. 렌즈를 바꾸려면 컴포넌트 속성이 아니라 이 트랙의 키(채널 이름 `None`)를 바꾼다.
 - MCP `set_camera_cut_binding`은 내부 오류가 난다. 컷 섹션에 `set_properties`로 `{"CameraBindingID": {"guid": "<카메라 바인딩 ID>", "sequenceId": 0, "resolveParentIndex": 0}}`을 넣는다.
 - CaptureViewport는 화각이 90도로 고정이다. 시네 카메라 구도를 보려면 카메라 위치로 캡처한 뒤 가운데를 잘라낸다(20mm면 가로 59%).
