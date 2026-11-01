@@ -52,3 +52,6 @@ Render/
 # ===== OS =====
 Thumbs.db
 .DS_Store
+
+# Office 잠금 파일
+~$*
