@@ -79,7 +79,11 @@
 - [x] 기 모으기 떨림 (#5, 2026-10-31): Body에 레이어드 `MetaHuman_ControlRig` 트랙. 72~122에서 몸통·가슴·양 주먹·머리가 점점 세게 떨리고, 65~122에 4cm 떠오른다. 레이어드 리그는 깨끗한 바인딩에서는 애니메이션 트랙 위에 정상으로 얹힌다.
 - [x] 카메라 (#4, 2026-10-31): `Story/Cameras` 폴더의 CineCamera 6대(Cam5는 컷에서 빠져 안 쓰임). 컷: Cam1 대치 0~52(정면 대각선 20mm) / Cam2 도약 52~65 / Cam3 공중 기 모으기 65~125(앞쪽 반원 궤도, 35mm) / Cam4 125~215(캐릭터-벽 중앙에서 수직, 20mm, 벽 왼쪽·캐릭터 오른쪽, 스트레이트~충돌) / Cam6 마무리 215~300(캐릭터 등 뒤 약 7m, 24mm, 캐릭터 왼쪽·부서진 벽 오른쪽, 천천히 올라감). 180~215 슬로모션 0.35배. 캐릭터는 212~300 마지막 자세 유지. 캐릭터는 사우스포라 가슴이 +X를 향한다(정면 샷은 +X 쪽에서).
 - [x] 매니 제거 (2026-10-31): 원래 게임 모드 `BP_ThirdPersonGameMode`가 플레이·렌더 때 PlayerStart(원점)에 매니를 생성했다. `/Game/Story/BP_CinematicGameMode`(GameModeBase, DefaultPawnClass·HUDClass 없음)를 만들어 `Lvl_ThirdPerson` World Settings의 GameMode로 지정했다. PIE에서 Pawn이 생성되지 않는 것을 확인했다.
-- [ ] 남은 이슈: #7 렌더링(Movie Render Queue), 소리
+- [x] 배경 정리 (#7, 2026-11-01): 사용자 결정으로 낮 조명은 유지한다. 템플릿 메시 40개(경사로·바깥 블록·초록 기둥)는 숨겨서 아웃라이너 `HiddenTemplate` 폴더에 넣었다(컴포넌트 bVisible·액터 bHidden 끔). 캐릭터가 서 있는 중앙 발판(z≈210, `SM_Cylinder`·`SM_QuarterCylinder5~12`·`SM_Cube13~16`)은 남겼다. `/Game/Story/M_Concrete`(월드 좌표 노이즈 2톤)의 인스턴스 `MI_Stage`(발판)·`MI_Ground`(바닥)·`MI_Wall`(벽)을 입혔다. 바닥 `Floor`는 스케일 500으로 넓혔고, 안개는 z 0·밀도 0.035·StartDistance 2000으로 지평선을 가린다.
+- [x] 카메라 흔들림 (#7): Cam4 Transform에 184~200프레임 감쇠 진동 키(Z ±7cm, Y ±4cm, 롤·피치 1° 이하)
+- [x] 효과음 (#7): `Tools/sfx/make_sfx.py`가 numpy로 직접 합성한다(외부 음원 없음) → `Tools/sfx/LS_Punch_sfx.wav`. Slomo 트랙을 반영해 렌더 영상 기준으로 시간을 맞춘다(전체 11.59초, 도약 1.93, 기 모으기 2.17~4.17, 착지 4.37, 발사 5.90, 충돌 6.22, 슬로모션 끝 8.75). Slomo 키를 바꾸면 스크립트의 `SLOMO_KEYS`도 바꾼다.
+- [x] Movie Render Queue 플러그인(`MovieRenderPipeline`)을 uproject에 추가 (에디터 재시작 필요)
+- [ ] 남은 이슈: #7 MRQ 렌더 → 효과음 합치기(ffmpeg 필요) → 제출
 
 ## 메타휴먼 작업 메모
 
@@ -106,6 +110,10 @@
 - `AS_MHP_punch_Puncher`(30fps 기준 0~152프레임)에서 주먹이 가장 뻗는 순간은 120프레임(4.0초)이다. 124프레임에는 이미 거둬들인다.
 - 캡처 여러 장을 한 스크립트에서 받으면 응답이 커서 MCP 연결이 끊긴다(5장 이상). 4장씩 받고, PIL로 잘라 한 장으로 합쳐서 본다. MCP 도구를 쓰기 전에 `IsPIERunning`으로 Simulate가 켜져 있는지 확인한다(켜져 있으면 PIE 월드가 캡처된다).
 - Unreal MCP에는 Fracture(Geometry Collection 생성·분할) 도구가 없다. 파이썬 스크립트 도구도 `unreal` 모듈을 쓸 수 없다. Fracture는 사용자가 Fracture 모드에서 직접 한다.
+- Geometry Collection은 부서지기 전에 `RootProxyData`의 프록시 메시(기본 큐브 + BasicShapeMaterial)로 그려진다. 벽 재질을 바꿀 때는 GC 에셋의 `Materials`와 `RootProxyData.meshOverrideMaterials`를 함께 바꾼다. 재질에 `bUsedWithGeometryCollections`가 꺼져 있으면 기본 재질로 보인다. 에디터 뷰포트는 바꾼 뒤에도 캐시된 흰 벽을 보여줄 수 있으니 Simulate에서 확인한다.
+- `CaptureViewport`에는 `annotations`를 반드시 넘긴다(주석이 필요 없으면 gridSpacing·maxLabelDistance 0).
+- MCP `bake_channel_keys`는 값 1개만 돌려준다(쓸 수 없음). 값은 `get_keys`로 읽는다.
+- `WallBreaker`는 BeginPlay 기준 타이머라서 MRQ의 Engine Warm Up 프레임만큼 일찍 부서질 수 있다. 렌더 결과에서 벽이 공기포보다 먼저 부서지면 warm-up을 0으로 하거나 TriggerTime을 그만큼 늘린다.
 - MCP `CaptureViewport`는 Simulate 중에도 동작한다. 응답이 커서 파일로 저장되는데, base64를 디코딩하면 이미지로 볼 수 있다.
 
 ## 마커리스 모캡 파이프라인 (테스트 완료)
