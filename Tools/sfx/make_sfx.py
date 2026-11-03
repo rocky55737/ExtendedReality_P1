@@ -10,9 +10,9 @@ import numpy as np
 
 SR = 48000
 FPS = 30
-SEQ_END = 300
+SEQ_END = 430
 # LS_Punch Slomo 트랙 키 (프레임, 배속)
-SLOMO_KEYS = [(0, 1.0), (180, 1.0), (184, 0.35), (205, 0.35), (215, 1.0), (300, 1.0)]
+SLOMO_KEYS = [(0, 1.0), (180, 1.0), (184, 0.35), (205, 0.35), (215, 1.0), (300, 1.0), (430, 1.0)]
 
 rng = np.random.default_rng(7)
 
@@ -149,6 +149,30 @@ rd = 4.0
 rumble = lowpass(noise(rd), 160) * env(int(rd * SR), 0.4, 3.0, 2.5)
 place(rumble / np.abs(rumble).max(), t_hit + 0.2, 0.35)
 
+# 6.5) 탈출 (300~430, 2026-11-04): 웅크림 → 도약 → 닭 날갯짓(8프레임 주기) + 꼬꼬 → 구멍 밖으로 휙
+t_take = seq_to_sec(318)
+place(lowpass(noise(0.15), 800) * env(int(0.15 * SR), 0.003, 0.1), t_take - 0.05, 0.4)
+w = bandpass(noise(0.6), 600, 1.3) * env(int(0.6 * SR), 0.2, 0.35)
+place(w / np.abs(w).max(), t_take, 0.3)
+for f in range(322, 418, 8):
+    ln = 0.14
+    fl = lowpass(noise(ln), 700) * env(int(ln * SR), 0.01, 0.08, 5)
+    place(fl / np.abs(fl).max(), seq_to_sec(f) - 0.03, 0.32, pan=rng.uniform(-0.2, 0.2))
+def cluck(ln=0.16, f0=520):
+    n = int(ln * SR)
+    k = np.linspace(0, 1, n)
+    freq = f0 * (1 + 0.6 * np.sin(np.pi * k) - 0.3 * k)
+    ph = 2 * np.pi * np.cumsum(freq) / SR
+    tone = sum(np.sin(h * ph) / h for h in (1, 2, 3, 4, 6))
+    tone = bandpass(tone + 0.3 * noise(ln), 1200, 0.8)
+    return tone * env(n, 0.008, ln * 0.5, 4)
+for f, f0 in ((326, 520), (333, 600), (350, 540), (358, 640), (378, 560)):
+    c = cluck(f0=f0)
+    place(c / np.abs(c).max(), seq_to_sec(f), 0.35)
+wd = seq_to_sec(430) - seq_to_sec(350)
+ww = bandpass(noise(wd), 500, 0.9) * np.clip(np.linspace(0, 2, int(wd * SR)), 0, 1)
+place(ww / np.abs(ww).max(), seq_to_sec(350), 0.18)
+
 # 7) 마무리 페이드
 fade = int(1.2 * SR)
 end_i = int(TOTAL * SR)
@@ -165,5 +189,5 @@ with wave.open(sys.argv[1] if len(sys.argv) > 1 else "sfx.wav", "wb") as w:
     w.writeframes(pcm.tobytes())
 
 print(f"total {TOTAL:.3f}s ({TOTAL * FPS:.1f} output frames)")
-for f in (58, 65, 125, 131, 177, 184, 215, 300):
+for f in (58, 65, 125, 131, 177, 184, 215, 300, 318, 430):
     print(f"seq {f:3d} -> {seq_to_sec(f):6.3f}s")

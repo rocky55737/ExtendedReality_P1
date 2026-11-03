@@ -1,0 +1,190 @@
+"""확장판(올드보이 오마주) 최종 편집.
+
+MRQ PNG(LS_Room, LS_Punch) + 합성 효과음 + 자막 + 촬영 원본 비교 몽타주 → 제출용 MP4.
+사용: python make_story.py <MovieRenders 폴더> <모캡 원본 폴더(mocap_sdr)> <punch.mp4> <출력 폴더>
+"""
+import os
+import subprocess
+import sys
+import wave
+import glob
+
+import numpy as np
+
+REN, MOCAP, PUNCH, OUT = sys.argv[1:5]
+HERE = os.path.dirname(os.path.abspath(__file__))
+SFX = os.path.join(HERE, '..', 'sfx')
+TMP = os.path.join(OUT, 'story_tmp')
+os.makedirs(TMP, exist_ok=True)
+
+FF = 'ffmpeg'
+for c in glob.glob(os.path.expandvars(r'$LOCALAPPDATA/Microsoft/WinGet/Packages/Gyan.FFmpeg*/ffmpeg-*/bin/ffmpeg.exe')):
+    FF = c
+FONT = "C\\:/Windows/Fonts/malgun.ttf"
+FONTB = "C\\:/Windows/Fonts/malgunbd.ttf"
+SR = 48000
+ROOM_FPS = 30
+ROOM_SEC = 2627 / ROOM_FPS
+ENC = ['-c:v', 'libx264', '-preset', 'medium', '-crf', '17', '-pix_fmt', 'yuv420p', '-r', '30',
+       '-c:a', 'aac', '-b:a', '256k', '-ar', str(SR), '-ac', '2']
+
+
+def ff(args, script=None):
+    cmd = [FF, '-y', '-v', 'error'] + args
+    if script is not None:
+        p = os.path.join(TMP, 'filter.txt')
+        open(p, 'w', encoding='utf-8').write(script)
+        i = cmd.index('@FILTER@')
+        cmd[i:i + 1] = ['-/filter_complex', p]
+    print('>', ' '.join(a if len(a) < 80 else a[:77] + '...' for a in cmd[3:]))
+    subprocess.run(cmd, check=True)
+
+
+def text(t, size, y, start=None, end=None, font=FONTB, color='white', box=True):
+    """drawtext 한 줄. 페이드 인/아웃 0.4초."""
+    s = f"drawtext=fontfile='{font}':text='{t}':fontcolor={color}:fontsize={size}:x=(w-text_w)/2:y={y}"
+    if box:
+        s += ':box=1:boxcolor=black@0.45:boxborderw=18'
+    if start is not None:
+        s += (f":enable='between(t,{start},{end})'"
+              f":alpha='if(lt(t,{start}+0.4),(t-{start})/0.4,if(gt(t,{end}-0.4),({end}-t)/0.4,1))'")
+    return s
+
+
+# ---------- 1) 방 장면 효과음 (방 울림 + TV 웅웅 + 쟁반 밀림 + 날이 바뀌는 쉭) ----------
+rng = np.random.default_rng(11)
+
+
+def lowpass(x, fc):
+    X = np.fft.rfft(x)
+    f = np.fft.rfftfreq(len(x), 1 / SR)
+    return np.fft.irfft(X / np.sqrt(1 + (f / fc) ** 4), len(x))
+
+
+def bandpass(x, fc, q=1.0):
+    X = np.fft.rfft(x)
+    f = np.maximum(np.fft.rfftfreq(len(x), 1 / SR), 1)
+    return np.fft.irfft(X / np.sqrt(1 + (q * (f / fc - fc / f)) ** 2), len(x))
+
+
+def norm(x):
+    return x / (np.abs(x).max() + 1e-9)
+
+
+N = int(ROOM_SEC * SR)
+room = np.zeros(N)
+room += norm(lowpass(rng.standard_normal(N), 180)) * 0.06          # 방 울림
+t = np.arange(N) / SR
+hum = (np.sin(2 * np.pi * 60 * t) + 0.5 * np.sin(2 * np.pi * 120 * t) + 0.2 * np.sin(2 * np.pi * 180 * t))
+tv = np.where(t > 71.4, 1.0, 0.35)                                   # 섀도복싱(TV 앞)에서 크게
+room += norm(hum) * 0.025 * tv + norm(bandpass(rng.standard_normal(N), 6000, 0.5)) * 0.012 * tv
+
+
+def put(sig, sec, g):
+    i = int(sec * SR)
+    j = min(N, i + len(sig))
+    room[i:j] += sig[:j - i] * g
+
+
+for s0, ln in ((735 / 30, 40 / 30), (1411 / 30, 29 / 30)):           # 쟁반이 배식구로 밀려 들어옴
+    n = int(ln * SR)
+    sc = bandpass(rng.standard_normal(n), 2500, 2.0) * (0.6 + 0.4 * np.sin(np.linspace(0, 40, n)) ** 2)
+    sc *= np.minimum(1, np.linspace(0, 6, n)) * np.minimum(1, np.linspace(6, 0, n))
+    put(norm(sc), s0, 0.18)
+    clank = np.sin(2 * np.pi * 1800 * np.arange(int(0.25 * SR)) / SR) * np.exp(-np.arange(int(0.25 * SR)) / SR * 25)
+    put(clank, s0 + ln, 0.15)
+for s0 in (24.0, 47.0, 57.0, 71.4):                                   # 자막(날짜) 바뀔 때 쉭
+    n = int(0.8 * SR)
+    w = bandpass(rng.standard_normal(n), 900, 1.2) * np.sin(np.linspace(0, np.pi, n)) ** 2
+    put(norm(w), s0 - 0.3, 0.12)
+room[:int(1.5 * SR)] *= np.linspace(0, 1, int(1.5 * SR))
+pcm = (np.stack([room, np.roll(room, 600)], 1) / np.abs(room).max() * 0.7 * 32767).astype(np.int16)
+room_wav = os.path.join(TMP, 'room.wav')
+with wave.open(room_wav, 'wb') as w:
+    w.setnchannels(2); w.setsampwidth(2); w.setframerate(SR); w.writeframes(pcm.tobytes())
+
+# ---------- 2) 방 장면 영상 + 자막 ----------
+SUBS = [  # (시작, 끝, 문구) — 쉼표·콜론은 drawtext에서 따로 이스케이프해야 해서 쓰지 않는다
+    (1.0, 5.5, '어느 날 눈을 떠 보니 갇혀 있었다'),
+    (18.3, 22.8, '문은 열리지 않았다'),
+    (24.2, 29.0, '1일째 — 배식구로 들어온 건 군만두뿐'),
+    (38.7, 43.0, '날짜를 세기 시작했다'),
+    (47.2, 52.0, '100일째 — 오늘도 군만두'),
+    (57.2, 62.0, '1년째 — 벽을 쳐 봤지만…'),
+    (71.6, 76.4, '3년째 — TV를 보며 몸을 만들었다'),
+]
+room_mp4 = os.path.join(TMP, 'room.mp4')
+vf = '[0:v]' + ','.join(text(s, 44, 'h-150', a, b) for a, b, s in SUBS) + '[v]'
+ff(['-framerate', '30', '-i', os.path.join(REN, 'LS_Room.%04d.png'), '-i', room_wav,
+    '@FILTER@', '-map', '[v]', '-map', '1:a', '-shortest'] + ENC + [room_mp4], vf)
+room_raw = os.path.join(TMP, 'room_raw.mp4')   # 비교 몽타주용(자막 없음)
+ff(['-framerate', '30', '-i', os.path.join(REN, 'LS_Room.%04d.png'),
+    '-c:v', 'libx264', '-preset', 'medium', '-crf', '17', '-pix_fmt', 'yuv420p', room_raw])
+
+# ---------- 3) 클라이맥스 + 탈출 ----------
+climax_raw = os.path.join(TMP, 'climax_raw.mp4')
+ff(['-framerate', '30', '-i', os.path.join(REN, 'LS_Punch.%04d.png'), '-i', os.path.join(SFX, 'LS_Punch_sfx.wav'),
+    '-shortest'] + ENC + [climax_raw])
+climax = os.path.join(TMP, 'climax.mp4')
+ff(['-i', climax_raw, '@FILTER@', '-map', '[v]', '-map', '0:a'] + ENC + [climax],
+   '[0:v]' + text('그리고 오늘', 48, 'h-150', 0.2, 2.0) + ',' + text('자유다!', 48, 'h-150', 13.0, 15.6) + '[v]')
+
+
+# ---------- 4) 카드 ----------
+def card(path, dur, lines):
+    vf = 'color=c=black:s=1920x1080:r=30:d=%s,' % dur + ','.join(
+        text(t_, sz, y, 0.0, dur, font=f_, color=c_, box=False) for t_, sz, y, f_, c_ in lines) + '[v]'
+    ff(['-f', 'lavfi', '-i', f'anullsrc=r={SR}:cl=stereo', '-t', str(dur), '@FILTER@',
+        '-map', '[v]', '-map', '0:a'] + ENC + [path], vf)
+
+
+title = os.path.join(TMP, 'title.mp4')
+card(title, 6, [('갇힌 남자', 96, 380, FONTB, 'white'),
+                ('— 「올드보이」 오마주 —', 40, 520, FONT, '0xBBBBBB'),
+                ('마커리스 모션캡처 · 메타휴먼 · 컨트롤 리그 · Chaos 파괴', 32, 640, FONT, '0x888888')])
+ending = os.path.join(TMP, 'ending.mp4')
+card(ending, 6, [('THE END', 90, 400, FONTB, 'white'),
+                 ('모캡 영상 7개 직접 촬영 → MetaHuman Animator 마커리스 솔브 → Puncher로 리타깃', 30, 560, FONT, '0xAAAAAA'),
+                 ('Unreal Engine 5.8 · Claude Code + Unreal MCP로 시퀀스·리깅 키 자동화', 30, 610, FONT, '0xAAAAAA')])
+cmp_card = os.path.join(TMP, 'cmp_card.mp4')
+card(cmp_card, 4, [('메이킹 — 직접 촬영한 원본 vs 최종 CG', 60, 470, FONTB, 'white')])
+
+# ---------- 5) 비교 몽타주 (원본 왼쪽 | 최종 CG 오른쪽) ----------
+# (원본 파일, 원본 시작초, LS_Room 영상 시작초, 길이, 설명)
+CLIPS = [
+    ('wakeup.mp4', 4.0, 4.0, 11.0, '깨어나기'),
+    ('doorknock.mp4', 0.0, 18.0, 6.0, '문 두드리기'),
+    ('eatingdumplingwithhand.mp4', 3.0, 24.0 + 3.0, 9.0, '손으로 군만두 먹기'),
+    ('Xcalendar.mp4', 0.0, 1154 / 30, 8.5, '벽에 날짜 긋기'),
+    ('failedpunchandpain.mp4', 2.0, 1711 / 30 + 2.0, 10.0, '벽 치고 손 아파하기'),
+    ('shawdowboxing.mp4', 0.0, 2143 / 30, 8.0, '섀도복싱'),
+]
+segs = []
+for i, (fn, os_, cs, d, label) in enumerate(CLIPS):
+    p = os.path.join(TMP, f'cmp{i}.mp4')
+    vf = (f'color=c=0x111111:s=1920x1080:r=30:d={d}[bg];'
+          f'[0:v]fps=30,scale=600:1000:force_original_aspect_ratio=decrease,setsar=1[o];'
+          f'[1:v]fps=30,scale=1240:-2,setsar=1[f];'
+          f'[bg][o]overlay=x=40+(600-w)/2:y=60+(1000-h)/2:shortest=1[t1];'
+          f'[t1][f]overlay=x=660:y=190:shortest=1,'
+          f"drawtext=fontfile='{FONTB}':text='직접 촬영한 원본':fontcolor=white:fontsize=30:x=40:y=14,"
+          f"drawtext=fontfile='{FONTB}':text='최종 CG — {label}':fontcolor=white:fontsize=30:x=660:y=140[v]")
+    ff(['-ss', str(os_), '-t', str(d), '-i', os.path.join(MOCAP, fn), '-ss', str(cs), '-t', str(d), '-i', room_raw,
+        '-f', 'lavfi', '-t', str(d), '-i', f'anullsrc=r={SR}:cl=stereo',
+        '@FILTER@', '-map', '[v]', '-map', '2:a'] + ENC + [p], vf)
+    segs.append(p)
+# 클라이맥스 비교는 기존 스크립트 재사용 (원본 punch.mp4 | 최종본)
+subprocess.run(['bash', os.path.join(SFX, 'make_compare.sh'), PUNCH, climax_raw, TMP], check=True)
+segs.append(os.path.join(TMP, 'LS_Punch_compare.mp4'))
+
+# ---------- 6) 전체 이어 붙이기 ----------
+parts = [title, room_mp4, climax, ending, cmp_card] + segs
+args = []
+for p in parts:
+    args += ['-i', p]
+fc = ''.join(f'[{i}:v]fps=30,scale=1920:1080,setsar=1,format=yuv420p[v{i}];[{i}:a]aresample={SR},'
+             f'aformat=channel_layouts=stereo[a{i}];' for i in range(len(parts)))
+fc += ''.join(f'[v{i}][a{i}]' for i in range(len(parts))) + f'concat=n={len(parts)}:v=1:a=1[v][a]'
+final = os.path.join(OUT, 'Oldboy_submit.mp4')
+ff(args + ['@FILTER@', '-map', '[v]', '-map', '[a]'] + ENC + [final], fc)
+print('done:', final)
