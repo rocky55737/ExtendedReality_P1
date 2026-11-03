@@ -24,7 +24,7 @@ FONT = "C\\:/Windows/Fonts/malgun.ttf"
 FONTB = "C\\:/Windows/Fonts/malgunbd.ttf"
 SR = 48000
 ROOM_FPS = 30
-ROOM_SEC = 2627 / ROOM_FPS
+ROOM_SEC = 4585 / ROOM_FPS
 ENC = ['-c:v', 'libx264', '-preset', 'medium', '-crf', '17', '-pix_fmt', 'yuv420p', '-r', '30',
        '-c:a', 'aac', '-b:a', '256k', '-ar', str(SR), '-ac', '2']
 
@@ -76,7 +76,7 @@ room = np.zeros(N)
 room += norm(lowpass(rng.standard_normal(N), 180)) * 0.06          # 방 울림
 t = np.arange(N) / SR
 hum = (np.sin(2 * np.pi * 60 * t) + 0.5 * np.sin(2 * np.pi * 120 * t) + 0.2 * np.sin(2 * np.pi * 180 * t))
-tv = np.where(t > 71.4, 1.0, 0.35)                                   # 섀도복싱(TV 앞)에서 크게
+tv = np.where(((t > 94.0) & (t < 110.1)) | ((t > 128.7) & (t < 144.8)) | (t < 4.0), 1.0, 0.35)  # TV 클로즈업·섀도복싱(TV 앞)에서 크게
 room += norm(hum) * 0.025 * tv + norm(bandpass(rng.standard_normal(N), 6000, 0.5)) * 0.012 * tv
 
 
@@ -86,14 +86,14 @@ def put(sig, sec, g):
     room[i:j] += sig[:j - i] * g
 
 
-for s0, ln in ((735 / 30, 40 / 30), (1411 / 30, 29 / 30)):           # 쟁반이 배식구로 밀려 들어옴
+for s0, ln in ((1145 / 30, 45 / 30), (1831 / 30, 29 / 30), (3304 / 30, 29 / 30)):           # 쟁반이 배식구로 밀려 들어옴
     n = int(ln * SR)
     sc = bandpass(rng.standard_normal(n), 2500, 2.0) * (0.6 + 0.4 * np.sin(np.linspace(0, 40, n)) ** 2)
     sc *= np.minimum(1, np.linspace(0, 6, n)) * np.minimum(1, np.linspace(6, 0, n))
     put(norm(sc), s0, 0.18)
     clank = np.sin(2 * np.pi * 1800 * np.arange(int(0.25 * SR)) / SR) * np.exp(-np.arange(int(0.25 * SR)) / SR * 25)
     put(clank, s0 + ln, 0.15)
-for s0 in (24.0, 47.0, 57.0, 71.4):                                   # 자막(날짜) 바뀔 때 쉭
+for s0 in (38.2, 61.2, 71.2, 79.8, 94.2, 110.3, 128.9, 145.0):                                   # 자막(날짜) 바뀔 때 쉭
     n = int(0.8 * SR)
     w = bandpass(rng.standard_normal(n), 900, 1.2) * np.sin(np.linspace(0, np.pi, n)) ** 2
     put(norm(w), s0 - 0.3, 0.12)
@@ -104,14 +104,19 @@ with wave.open(room_wav, 'wb') as w:
     w.setnchannels(2); w.setsampwidth(2); w.setframerate(SR); w.writeframes(pcm.tobytes())
 
 # ---------- 2) 방 장면 영상 + 자막 ----------
-SUBS = [  # (시작, 끝, 문구) — 쉼표·콜론은 drawtext에서 따로 이스케이프해야 해서 쓰지 않는다
-    (1.0, 5.5, '어느 날 눈을 떠 보니 갇혀 있었다'),
-    (18.3, 22.8, '문은 열리지 않았다'),
-    (24.2, 29.0, '1일째 — 배식구로 들어온 건 군만두뿐'),
-    (38.7, 43.0, '날짜를 세기 시작했다'),
-    (47.2, 52.0, '100일째 — 오늘도 군만두'),
-    (57.2, 62.0, '1년째 — 벽을 쳐 봤지만…'),
-    (71.6, 76.4, '3년째 — TV를 보며 몸을 만들었다'),
+SUBS = [  # (시작, 끝, 문구) — 쉼표·콜론은 drawtext에서 따로 이스케이프해야 해서 쓰지 않는다. LS_Room 프레임/30 기준
+    (4.5, 9.5, '어느 날 눈을 떠 보니 갇혀 있었다'),
+    (26.5, 31.0, '문은 열리지 않았다'),
+    (38.2, 43.0, '1일째 — 배식구로 들어온 건 군만두뿐'),
+    (52.8, 57.5, '날짜를 세기 시작했다'),
+    (61.2, 66.0, '100일째 — 오늘도 군만두'),
+    (71.2, 76.0, '200일째 — 하루하루가 똑같다'),
+    (79.8, 85.0, '1년째 — 벽을 쳐 봤지만…'),
+    (94.2, 99.0, '3년째 — TV를 보며 몸을 만들었다'),
+    (110.3, 115.0, '5년째 — 군만두 맛도 잊었다'),
+    (120.3, 125.0, '벽이 날짜로 가득 찼다'),
+    (128.9, 134.0, '10년째 — 아직 멀었다'),
+    (145.0, 151.5, '15년째 — 오늘 이 벽을 부순다'),
 ]
 room_mp4 = os.path.join(TMP, 'room.mp4')
 vf = '[0:v]' + ','.join(text(s, 44, 'h-150', a, b) for a, b, s in SUBS) + '[v]'
@@ -127,7 +132,7 @@ ff(['-framerate', '30', '-i', os.path.join(REN, 'LS_Punch.%04d.png'), '-i', os.p
     '-shortest'] + ENC + [climax_raw])
 climax = os.path.join(TMP, 'climax.mp4')
 ff(['-i', climax_raw, '@FILTER@', '-map', '[v]', '-map', '0:a'] + ENC + [climax],
-   '[0:v]' + text('그리고 오늘', 48, 'h-150', 0.2, 2.0) + ',' + text('자유다!', 48, 'h-150', 13.0, 15.6) + '[v]')
+   '[0:v]' + text('자유다!', 48, 'h-150', 13.0, 15.6) + '[v]')
 
 
 # ---------- 4) 카드 ----------
@@ -139,11 +144,11 @@ def card(path, dur, lines):
 
 
 title = os.path.join(TMP, 'title.mp4')
-card(title, 6, [('갇힌 남자', 96, 380, FONTB, 'white'),
+card(title, 7, [('갇힌 남자', 96, 380, FONTB, 'white'),
                 ('— 「올드보이」 오마주 —', 40, 520, FONT, '0xBBBBBB'),
                 ('마커리스 모션캡처 · 메타휴먼 · 컨트롤 리그 · Chaos 파괴', 32, 640, FONT, '0x888888')])
 ending = os.path.join(TMP, 'ending.mp4')
-card(ending, 6, [('THE END', 90, 400, FONTB, 'white'),
+card(ending, 8, [('THE END', 90, 400, FONTB, 'white'),
                  ('모캡 영상 7개 직접 촬영 → MetaHuman Animator 마커리스 솔브 → Puncher로 리타깃', 30, 560, FONT, '0xAAAAAA'),
                  ('Unreal Engine 5.8 · Claude Code + Unreal MCP로 시퀀스·리깅 키 자동화', 30, 610, FONT, '0xAAAAAA')])
 # ---------- 6) 전체 이어 붙이기 ----------
