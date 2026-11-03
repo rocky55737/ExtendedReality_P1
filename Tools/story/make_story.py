@@ -1,7 +1,7 @@
 """확장판(올드보이 오마주) 최종 편집.
 
-MRQ PNG(LS_Room, LS_Punch) + 합성 효과음 + 자막 + 촬영 원본 비교 몽타주 → 제출용 MP4.
-사용: python make_story.py <MovieRenders 폴더> <모캡 원본 폴더(mocap_sdr)> <punch.mp4> <출력 폴더>
+MRQ PNG(LS_Room, LS_Punch) + 합성 효과음 + 자막 → 제출용 MP4. (원본 비교 영상은 넣지 않는다 — 2026-11-04 사용자 결정)
+사용: python make_story.py <MovieRenders 폴더> <출력 폴더>
 """
 import os
 import subprocess
@@ -11,7 +11,7 @@ import glob
 
 import numpy as np
 
-REN, MOCAP, PUNCH, OUT = sys.argv[1:5]
+REN, OUT = sys.argv[1:3]
 HERE = os.path.dirname(os.path.abspath(__file__))
 SFX = os.path.join(HERE, '..', 'sfx')
 TMP = os.path.join(OUT, 'story_tmp')
@@ -146,39 +146,8 @@ ending = os.path.join(TMP, 'ending.mp4')
 card(ending, 6, [('THE END', 90, 400, FONTB, 'white'),
                  ('모캡 영상 7개 직접 촬영 → MetaHuman Animator 마커리스 솔브 → Puncher로 리타깃', 30, 560, FONT, '0xAAAAAA'),
                  ('Unreal Engine 5.8 · Claude Code + Unreal MCP로 시퀀스·리깅 키 자동화', 30, 610, FONT, '0xAAAAAA')])
-cmp_card = os.path.join(TMP, 'cmp_card.mp4')
-card(cmp_card, 4, [('메이킹 — 직접 촬영한 원본 vs 최종 CG', 60, 470, FONTB, 'white')])
-
-# ---------- 5) 비교 몽타주 (원본 왼쪽 | 최종 CG 오른쪽) ----------
-# (원본 파일, 원본 시작초, LS_Room 영상 시작초, 길이, 설명)
-CLIPS = [
-    ('wakeup.mp4', 4.0, 4.0, 11.0, '깨어나기'),
-    ('doorknock.mp4', 0.0, 18.0, 6.0, '문 두드리기'),
-    ('eatingdumplingwithhand.mp4', 3.0, 24.0 + 3.0, 9.0, '손으로 군만두 먹기'),
-    ('Xcalendar.mp4', 0.0, 1154 / 30, 8.5, '벽에 날짜 긋기'),
-    ('failedpunchandpain.mp4', 2.0, 1711 / 30 + 2.0, 10.0, '벽 치고 손 아파하기'),
-    ('shawdowboxing.mp4', 0.0, 2143 / 30, 8.0, '섀도복싱'),
-]
-segs = []
-for i, (fn, os_, cs, d, label) in enumerate(CLIPS):
-    p = os.path.join(TMP, f'cmp{i}.mp4')
-    vf = (f'color=c=0x111111:s=1920x1080:r=30:d={d}[bg];'
-          f'[0:v]fps=30,scale=600:1000:force_original_aspect_ratio=decrease,setsar=1[o];'
-          f'[1:v]fps=30,scale=1240:-2,setsar=1[f];'
-          f'[bg][o]overlay=x=40+(600-w)/2:y=60+(1000-h)/2:shortest=1[t1];'
-          f'[t1][f]overlay=x=660:y=190:shortest=1,'
-          f"drawtext=fontfile='{FONTB}':text='직접 촬영한 원본':fontcolor=white:fontsize=30:x=40:y=14,"
-          f"drawtext=fontfile='{FONTB}':text='최종 CG — {label}':fontcolor=white:fontsize=30:x=660:y=140[v]")
-    ff(['-ss', str(os_), '-t', str(d), '-i', os.path.join(MOCAP, fn), '-ss', str(cs), '-t', str(d), '-i', room_raw,
-        '-f', 'lavfi', '-t', str(d), '-i', f'anullsrc=r={SR}:cl=stereo',
-        '@FILTER@', '-map', '[v]', '-map', '2:a'] + ENC + [p], vf)
-    segs.append(p)
-# 클라이맥스 비교는 기존 스크립트 재사용 (원본 punch.mp4 | 최종본)
-subprocess.run(['bash', os.path.join(SFX, 'make_compare.sh'), PUNCH, climax_raw, TMP], check=True)
-segs.append(os.path.join(TMP, 'LS_Punch_compare.mp4'))
-
 # ---------- 6) 전체 이어 붙이기 ----------
-parts = [title, room_mp4, climax, ending, cmp_card] + segs
+parts = [title, room_mp4, climax, ending]
 args = []
 for p in parts:
     args += ['-i', p]
