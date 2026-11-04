@@ -131,7 +131,7 @@ ff(['-framerate', '30', '-i', os.path.join(REN, 'LS_Punch.%04d.png'), '-i', os.p
     '-shortest'] + ENC + [climax_raw])
 climax = os.path.join(TMP, 'climax.mp4')
 ff(['-i', climax_raw, '@FILTER@', '-map', '[v]', '-map', '0:a'] + ENC + [climax],
-   '[0:v]' + text('界王拳!!', 96, '(h-text_h)/2+260', 5.6, 7.8) + ',' + text('자유다!', 48, 'h-150', 13.0, 15.6) + '[v]')
+   '[0:v]' + text('계왕권(鷄王拳)!!', 96, '(h-text_h)/2+260', 5.6, 7.8) + ',' + text('자유다!', 48, 'h-150', 13.0, 15.6) + '[v]')
 
 
 # ---------- 4) 카드 ----------
