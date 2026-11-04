@@ -122,9 +122,6 @@ room_mp4 = os.path.join(TMP, 'room.mp4')
 vf = '[0:v]' + ','.join(text(s, 44, 'h-150', a, b) for a, b, s in SUBS) + '[v]'
 ff(['-framerate', '30', '-i', os.path.join(REN, 'LS_Room.%04d.png'), '-i', room_wav,
     '@FILTER@', '-map', '[v]', '-map', '1:a', '-shortest'] + ENC + [room_mp4], vf)
-room_raw = os.path.join(TMP, 'room_raw.mp4')   # 비교 몽타주용(자막 없음)
-ff(['-framerate', '30', '-i', os.path.join(REN, 'LS_Room.%04d.png'),
-    '-c:v', 'libx264', '-preset', 'medium', '-crf', '17', '-pix_fmt', 'yuv420p', room_raw])
 
 # ---------- 3) 클라이맥스 + 탈출 ----------
 climax_raw = os.path.join(TMP, 'climax_raw.mp4')
