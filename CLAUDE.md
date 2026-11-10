@@ -120,6 +120,10 @@
 - [x] **확장판 최종 렌더·편집 (2026-11-04 11:17)**: MRQ LS_Room 5127장 + LS_Punch 478장 → `make_story.py` → `Saved/Oldboy_submit.mp4`(3분 21.8초, 1080p, 111MB). 재제출본이다.
 - [x] **재제출 (2026-11-04)**: 마감(11:59) 전에 `Saved/Oldboy_v1.mp4`(쟁반이 들어오는 장면이 비어 있음)를 냈다. 마감 뒤에 고친 `Saved/Oldboy_submit.mp4`(쟁반 `Room_TrayIn` 별도 액터, 대사 자막, 계왕권(鷄王拳) 자막)가 나왔지만 제출하지 않았다. MRQ에서는 Attach 트랙이 붙은 액터가 붙기 전 구간에서 Transform 키대로 움직이지 않는다. `add_actors`가 자동으로 만든 Transform 트랙과 새로 만든 트랙이 섞이면 값이 평균이 된다(`find_tracks_by_type`로 찾아 `remove_track`으로 지움).
 - [x] **README·기술 문서 확장판 반영 (2026-11-06)**: README 맨 위를 확장판 「갇힌 남자」로 바꾸고(막 표, 해결한 문제), 기존 내용은 "클라이맥스" 절로 내렸다. 미디어 `media/oldboy_720p.mp4`(Oldboy_submit 720p, 10.6MB), `oldboy_tally.gif`, `oldboy_escape.gif`, `oldboy_story.jpg`. `Docs/make_tech_doc.py`에 막 표·확장판 촬영·LS_Room·탈출·세트를 더해 docx 재생성.
+- [x] **점검용 자료 (2026-11-10)**
+  - 인버스 리깅 근거 Doc: https://claude.ai/artifact/NXv9D3E5gmvZNrLyHckJgW (베이크 절차 스크린샷, 키 개수 Section_0 304,462개 / Section_1 211개, 추가 동작 표). 원본 스크린샷·녹화는 `Downloads\rig_evidence\`(노트북에만 있음)
+  - 모캡 프레젠테이션 `Saved/MocapShow.mp4`(6.1초): 큰 화면 `/Game/Cinematics/LS_MocapShow`(BP_Puncher + `AS_MHP_punch_Puncher` 0~152, Spawnable CineCamera (330,−20,305) yaw 180 16mm) 렌더 + 오른쪽 위 [촬영 원본 | 모캡 스켈레톤] 창. `python Tools/sfx/make_mocapshow.py <렌더 폴더> <punch.mp4> <스켈레톤 녹화> <출력>`. 스켈레톤은 `MHP_punch` 편집기(Show Skeleton, 색 하늘색으로 바꿈)를 화면 녹화한 `rig_evidence/original_with_skeleton.mp4`. 원본은 0.5005초(MHP 처리 시작 30프레임/59.94), 녹화는 0.10초부터 맞춘다.
+  - 주의: `create_camera`는 현재 플레이헤드 프레임에 렌즈 키(35mm 등)를 자동으로 넣는다. 만든 뒤 `get_keys`로 확인하고 지운다.
 - 다음 일정: **2026-11-10(화) 제출 과제 점검**. 채점 = 학생 점수 40% + 교수 기준 60%(5개 기술 요소 포함 여부는 데모 때 점검, 기술을 영상으로 효과적으로 보여줬는가).
 - [x] **확장판 「올드보이」 오마주 (2026-11-03 사용자 결정)**: 밀실에 갇혀 군만두만 먹다가 수련해서 벽을 부수고 나간다. 원작 영상·음악은 쓰지 않고 설정만 오마주한다.
   - 1막 갇힘: 밀실(침대·TV·문 배식구, 천장 조명 하나). 깨어나서 문을 두드림 / 2막 군만두: 배식구로 쟁반이 들어오고 먹음. 먹는 클립을 반복하며 "1일째 → 100일째 → 3년째" 자막, 벽에 날짜 표시가 늘어남 / 3막 첫 탈출 실패: 벽 펀치 → 손이 아파 움켜쥠(넘어지지 않음, 사용자 변경) / 4막 수련: TV 앞 섀도복싱, 벽 치기, 날짜 표시 계속 늘어남 / 5막 각성: 기존 v2 클라이맥스(벽 너머 햇빛) / 6막 탈출 (2026-11-03 사용자 변경): 걸어 나가지 않고 **점프해서 닭처럼 팔을 파닥이며 구멍으로 날아 나감**(마무리 개그). 클라이맥스의 파닥임 리깅(Section_1 위팔 Y 키)과 모캡 점프를 재사용하므로 추가 촬영이 필요 없다 → 엔딩 → 비교 영상
